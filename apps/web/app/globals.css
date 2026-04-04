@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+:root {
+  --color-bg-primary: #0a0a0f;
+  --color-bg-secondary: #12121a;
+  --color-bg-card: #1a1a2e;
+  --color-text-primary: #e4e4e7;
+  --color-text-secondary: #a1a1aa;
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+  --color-gold: #f59e0b;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
