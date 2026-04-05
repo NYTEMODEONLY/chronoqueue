@@ -48,6 +48,65 @@ export interface EquipmentItem {
   powerScore: number
 }
 
+type EquippedItemRow = {
+  inventory: typeof inventories.$inferSelect
+  item: typeof items.$inferSelect
+}
+
+function toHeroWithEquipment(
+  hero: typeof heroes.$inferSelect,
+  playerId: string,
+  equippedItems: EquippedItemRow[]
+): HeroWithEquipment {
+  const equipment: HeroWithEquipment['equipment'] = {
+    weapon: null,
+    chest: null,
+    legs: null,
+    accessory_1: null,
+  }
+
+  for (const row of equippedItems) {
+    if (!row.inventory.equipped) continue
+
+    const equipItem: EquipmentItem = {
+      id: row.item.id,
+      name: row.item.name,
+      slot: row.item.slot,
+      weaponType: row.item.weaponType,
+      weaponPower: row.item.weaponPower,
+      statBonuses: (row.item.statBonuses ?? {}) as Record<string, number>,
+      rarityTier: row.item.rarityTier,
+      powerScore: row.item.powerScore,
+    }
+
+    const slot = row.item.slot as keyof typeof equipment
+    if (slot in equipment) {
+      equipment[slot] = equipItem
+    }
+  }
+
+  return {
+    id: hero.id,
+    playerId,
+    name: hero.name,
+    classId: hero.class as HeroClassId,
+    level: hero.level,
+    xp: hero.xp,
+    stats: hero.stats,
+    hp: hero.hp,
+    maxHp: calcMaxHp(hero.stats.vit),
+    gold: hero.gold,
+    currentZone: hero.currentZone,
+    currentAct: hero.currentAct,
+    combatState: hero.combatState,
+    deaths: hero.deaths,
+    kills: hero.kills,
+    equipment,
+    createdAt: hero.createdAt.toISOString(),
+    lastTickAt: hero.lastTickAt.toISOString(),
+  }
+}
+
 export async function createCharacter(
   input: CreateCharacterInput
 ): Promise<{ success: true; hero: HeroWithEquipment } | { success: false; error: string }> {
@@ -140,50 +199,21 @@ export async function createCharacter(
     ])
 
     // 5. Build response
-    const equipment: HeroWithEquipment['equipment'] = {
-      weapon: null,
-      chest: null,
-      legs: null,
-      accessory_1: null,
-    }
+    const equippedItems = await db
+      .select({
+        inventory: inventories,
+        item: items,
+      })
+      .from(inventories)
+      .innerJoin(items, eq(inventories.itemId, items.id))
+      .where(eq(inventories.heroId, hero.id))
 
-    const toEquipmentItem = (item: typeof weaponItem): EquipmentItem => ({
-      id: item.id,
-      name: item.name,
-      slot: item.slot,
-      weaponType: item.weaponType,
-      weaponPower: item.weaponPower,
-      statBonuses: (item.statBonuses ?? {}) as Record<string, number>,
-      rarityTier: item.rarityTier,
-      powerScore: item.powerScore,
-    })
-
-    if (weaponItem.slot === 'weapon') equipment.weapon = toEquipmentItem(weaponItem)
-    if (armorItem.slot === 'chest') equipment.chest = toEquipmentItem(armorItem)
-    if (armorItem.slot === 'legs') equipment.legs = toEquipmentItem(armorItem)
-    if (armorItem.slot === 'accessory_1') equipment.accessory_1 = toEquipmentItem(armorItem)
+    const equipment = toHeroWithEquipment(hero, playerId, equippedItems).equipment
 
     return {
       success: true,
       hero: {
-        id: hero.id,
-        playerId,
-        name: hero.name,
-        classId: hero.class as HeroClassId,
-        level: hero.level,
-        xp: hero.xp,
-        stats: hero.stats,
-        hp: hero.hp,
-        maxHp,
-        gold: hero.gold,
-        currentZone: hero.currentZone,
-        currentAct: hero.currentAct,
-        combatState: hero.combatState,
-        deaths: hero.deaths,
-        kills: hero.kills,
-        equipment,
-        createdAt: hero.createdAt.toISOString(),
-        lastTickAt: hero.lastTickAt.toISOString(),
+        ...toHeroWithEquipment(hero, playerId, equippedItems),
       },
     }
   } catch (error) {
@@ -230,55 +260,41 @@ export async function loadHero(
       .innerJoin(items, eq(inventories.itemId, items.id))
       .where(eq(inventories.heroId, hero.id))
 
-    const equipment: HeroWithEquipment['equipment'] = {
-      weapon: null,
-      chest: null,
-      legs: null,
-      accessory_1: null,
-    }
-
-    for (const row of equippedItems) {
-      if (!row.inventory.equipped) continue
-      const equipItem: EquipmentItem = {
-        id: row.item.id,
-        name: row.item.name,
-        slot: row.item.slot,
-        weaponType: row.item.weaponType,
-        weaponPower: row.item.weaponPower,
-        statBonuses: (row.item.statBonuses ?? {}) as Record<string, number>,
-        rarityTier: row.item.rarityTier,
-        powerScore: row.item.powerScore,
-      }
-      const slot = row.item.slot as keyof typeof equipment
-      if (slot in equipment) {
-        equipment[slot] = equipItem
-      }
-    }
-
-    const maxHp = calcMaxHp(hero.stats.vit)
-
-    return {
-      id: hero.id,
-      playerId: player.id,
-      name: hero.name,
-      classId: hero.class as HeroClassId,
-      level: hero.level,
-      xp: hero.xp,
-      stats: hero.stats,
-      hp: hero.hp,
-      maxHp,
-      gold: hero.gold,
-      currentZone: hero.currentZone,
-      currentAct: hero.currentAct,
-      combatState: hero.combatState,
-      deaths: hero.deaths,
-      kills: hero.kills,
-      equipment,
-      createdAt: hero.createdAt.toISOString(),
-      lastTickAt: hero.lastTickAt.toISOString(),
-    }
+    return toHeroWithEquipment(hero, player.id, equippedItems)
   } catch (error) {
     console.error('loadHero error:', error)
+    return null
+  }
+}
+
+export async function loadHeroByPlayerId(
+  playerId: string
+): Promise<HeroWithEquipment | null> {
+  try {
+    const db = getDb()
+
+    const heroRows = await db
+      .select()
+      .from(heroes)
+      .where(eq(heroes.playerId, playerId))
+      .limit(1)
+
+    if (heroRows.length === 0) return null
+
+    const hero = heroRows[0]
+
+    const equippedItems = await db
+      .select({
+        inventory: inventories,
+        item: items,
+      })
+      .from(inventories)
+      .innerJoin(items, eq(inventories.itemId, items.id))
+      .where(eq(inventories.heroId, hero.id))
+
+    return toHeroWithEquipment(hero, playerId, equippedItems)
+  } catch (error) {
+    console.error('loadHeroByPlayerId error:', error)
     return null
   }
 }

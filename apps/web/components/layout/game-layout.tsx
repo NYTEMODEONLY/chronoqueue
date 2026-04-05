@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useGameStore } from '@/lib/game-store'
-import { loadHero } from '@/app/actions/character'
+import { loadHero, loadHeroByPlayerId } from '@/app/actions/character'
 import { useGameLoop } from '@/lib/use-game-loop'
 import { CharacterCreationFlow } from '../character-creation/character-creation-flow'
 import { TopBar } from './top-bar'
@@ -12,7 +12,7 @@ import { CharacterPanel } from '../panels/character-panel'
 import { calcMaxHp } from '@/lib/class-data'
 
 export function GameLayout({ children }: { children: React.ReactNode }) {
-  const { hero, hasCompletedCreation, setHero, clearHero, setLoading, isLoading } =
+  const { hero, hasCompletedCreation, setHero, clearHero, setLoading, isLoading, deviceId } =
     useGameStore()
   const [hydrated, setHydrated] = useState(false)
   const [serverChecked, setServerChecked] = useState(false)
@@ -30,14 +30,22 @@ export function GameLayout({ children }: { children: React.ReactNode }) {
 
     async function checkServer() {
       const currentDeviceId = useGameStore.getState().deviceId
-      if (!currentDeviceId) {
+      const cachedHero = useGameStore.getState().hero
+      const cachedPlayerId = cachedHero?.playerId
+
+      if (!currentDeviceId && !cachedHero?.playerId) {
         setServerChecked(true)
         return
       }
 
       setLoading(true)
       try {
-        const serverHero = await loadHero(currentDeviceId)
+        let serverHero = currentDeviceId ? await loadHero(currentDeviceId) : null
+
+        if (!serverHero && cachedPlayerId) {
+          serverHero = await loadHeroByPlayerId(cachedPlayerId)
+        }
+
         if (serverHero) {
           setHero(serverHero)
         } else {
@@ -52,7 +60,7 @@ export function GameLayout({ children }: { children: React.ReactNode }) {
     }
 
     checkServer()
-  }, [hydrated, serverChecked, setHero, clearHero, setLoading])
+  }, [hydrated, serverChecked, deviceId, setHero, clearHero, setLoading])
 
   useEffect(() => {
     if (hasCompletedCreation && hero) {
