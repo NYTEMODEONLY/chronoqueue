@@ -64,7 +64,6 @@ function eventToLogEntry(event: GameEventData): LogEntry {
 
   const payload = event.payload
 
-  // Map known event types
   if (event.eventType === 'character_created') {
     return { id: event.id, time, type: 'system', icon: '\u2726', text: `Hero created. The queue begins.` }
   }
@@ -92,7 +91,6 @@ function eventToLogEntry(event: GameEventData): LogEntry {
     }
   }
 
-  // Generic fallback
   return { id: event.id, time, type: 'system', icon: '\u00B7', text: `${event.eventType}` }
 }
 
@@ -139,7 +137,6 @@ export function AdventureLog() {
   useEffect(() => {
     if (!hero?.id) return
     loadGameEvents(hero.id).then((events) => {
-      // Events come newest-first from DB, reverse for chronological display
       const entries = events.reverse().map(eventToLogEntry)
       setLogEntries(entries)
     })

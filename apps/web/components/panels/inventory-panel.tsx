@@ -35,7 +35,6 @@ export function InventoryPanel() {
     loadInventory(hero.id).then(setInventoryItems)
   }, [hero?.id])
 
-  // Build grid: unequipped items in slot order, then empty slots
   const unequipped = inventoryItems
     .filter((item) => !item.equipped)
     .sort((a, b) => (a.slotIndex ?? 999) - (b.slotIndex ?? 999))
