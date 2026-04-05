@@ -35,14 +35,14 @@ export function TopBar({ characterName, level, hp, mp, xp }: TopBarProps) {
         {/* Status bars — desktop: full, mobile: mini stacked */}
         <div className="hidden flex-1 items-center gap-3 md:flex">
           <ProgressBar variant="health" current={hp.current} max={hp.max} size="md" />
-          <ProgressBar variant="mana" current={mp.current} max={mp.max} size="md" />
+          {mp.max > 0 && <ProgressBar variant="mana" current={mp.current} max={mp.max} size="md" />}
           <ProgressBar variant="xp" current={xp.current} max={xp.max} size="md" />
         </div>
 
         {/* Mobile: mini stacked bars */}
         <div className="flex flex-1 flex-col gap-0.5 md:hidden">
           <ProgressBar variant="health" current={hp.current} max={hp.max} size="sm" showValues={false} />
-          <ProgressBar variant="mana" current={mp.current} max={mp.max} size="sm" showValues={false} />
+          {mp.max > 0 && <ProgressBar variant="mana" current={mp.current} max={mp.max} size="sm" showValues={false} />}
           <ProgressBar variant="xp" current={xp.current} max={xp.max} size="sm" showValues={false} />
         </div>
       </div>

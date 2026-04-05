@@ -143,14 +143,14 @@ export function AdventureLog() {
   }, [hero?.id])
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (scrollRef.current?.lastElementChild) {
+      scrollRef.current.lastElementChild.scrollIntoView({ block: 'end', behavior: 'instant' })
     }
   }, [logEntries])
 
   return (
     <GamePanel title="Adventure Log">
-      <div ref={scrollRef} className="max-h-[calc(100vh-200px)] overflow-y-auto lg:max-h-none">
+      <div ref={scrollRef}>
         {logEntries.length === 0 ? (
           <p className="py-4 text-center font-[family-name:var(--font-inter)] text-[length:var(--font-small)] text-text-tertiary italic">
             Your journey has just begun. The log awaits your first action.

@@ -2,20 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const TABS = [
-  { href: '/', label: 'Home', icon: '\u2694' },
-  { href: '/queue', label: 'Queue', icon: '\u25C8' },
-  { href: '/inventory', label: 'Inventory', icon: '\u25AA' },
-  { href: '/quests', label: 'Quests', icon: '\u25B8' },
-] as const
+import { NAV_TABS } from '@/lib/nav-items'
 
 export function SideNav() {
   const pathname = usePathname()
 
   return (
     <nav className="flex flex-col gap-1 py-2">
-      {TABS.map((tab) => {
+      {NAV_TABS.map((tab) => {
         const isActive = pathname === tab.href
         return (
           <Link

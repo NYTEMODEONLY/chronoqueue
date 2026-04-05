@@ -2,13 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const TABS = [
-  { href: '/', label: 'Home', icon: '\u2694' },
-  { href: '/queue', label: 'Queue', icon: '\u25C8' },
-  { href: '/inventory', label: 'Inventory', icon: '\u25AA' },
-  { href: '/quests', label: 'Quests', icon: '\u25B8' },
-] as const
+import { NAV_TABS } from '@/lib/nav-items'
 
 export function BottomNav() {
   const pathname = usePathname()
@@ -23,7 +17,7 @@ export function BottomNav() {
       "
     >
       <div className="mx-auto flex h-[var(--bottombar-height)] max-w-[var(--max-content-width)] items-stretch">
-        {TABS.map((tab) => {
+        {NAV_TABS.map((tab) => {
           const isActive = pathname === tab.href
           return (
             <Link
