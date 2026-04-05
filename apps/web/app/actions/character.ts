@@ -1,7 +1,7 @@
 'use server'
 
 import { getDb, players, heroes, items, inventories } from '@chronoqueue/db'
-import { eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import type { HeroClassId } from '@/lib/class-data'
 import { getClassById, calcMaxHp } from '@/lib/class-data'
 
@@ -107,6 +107,17 @@ function toHeroWithEquipment(
   }
 }
 
+function isHeroNameTakenError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const dbError = error as { code?: string; detail?: string; constraint?: string }
+
+  if (dbError.code !== '23505') return false
+  if (dbError.constraint === 'players_username_key') return true
+  if (typeof dbError.detail === 'string' && dbError.detail.includes('(username)=(')) return true
+
+  return false
+}
+
 export async function createCharacter(
   input: CreateCharacterInput
 ): Promise<{ success: true; hero: HeroWithEquipment } | { success: false; error: string }> {
@@ -114,6 +125,18 @@ export async function createCharacter(
     const db = getDb()
     const classDef = getClassById(input.classId)
     const maxHp = calcMaxHp(classDef.baseStats.vit)
+    const name = input.name.trim()
+
+    // 0. Prevent duplicate names before mutating to keep errors deterministic.
+    const duplicateName = await db
+      .select()
+      .from(players)
+      .where(and(eq(players.username, name), ne(players.authId, input.deviceId)))
+      .limit(1)
+
+    if (duplicateName.length > 0) {
+      return { success: false, error: 'Hero name already exists' }
+    }
 
     // 1. Upsert player by deviceId (used as authId placeholder)
     const existingPlayers = await db
@@ -140,7 +163,7 @@ export async function createCharacter(
         .insert(players)
         .values({
           authId: input.deviceId,
-          username: input.name,
+          username: name,
         })
         .returning()
       playerId = newPlayer.id
@@ -151,7 +174,7 @@ export async function createCharacter(
       .insert(heroes)
       .values({
         playerId,
-        name: input.name,
+        name,
         class: input.classId,
         stats: classDef.baseStats,
         hp: maxHp,
@@ -217,6 +240,9 @@ export async function createCharacter(
       },
     }
   } catch (error) {
+    if (isHeroNameTakenError(error)) {
+      return { success: false, error: 'Hero name already exists' }
+    }
     console.error('createCharacter error:', error)
     return { success: false, error: 'Failed to create character' }
   }
