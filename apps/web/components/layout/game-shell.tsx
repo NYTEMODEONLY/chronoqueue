@@ -7,27 +7,36 @@ import { CharacterPanel } from '../panels/character-panel'
 import { AdventureLog } from '../panels/adventure-log'
 import { InventoryPanel } from '../panels/inventory-panel'
 import { QuestPanel } from '../panels/quest-panel'
-
-/* Mock data — will be replaced by real state from Zustand/TanStack Query */
-const MOCK_PLAYER = {
-  name: 'Gerald',
-  level: 14,
-  hp: { current: 234, max: 450 },
-  mp: { current: 180, max: 220 },
-  xp: { current: 1240, max: 8500 },
-}
+import { useGameStore } from '@/lib/game-store'
 
 export function GameShell() {
   const [activeTab, setActiveTab] = useState<GameTab>('adventure')
+  const hero = useGameStore((s) => s.hero)
+
+  const playerData = hero
+    ? {
+        name: hero.name,
+        level: hero.level,
+        hp: { current: hero.hp, max: hero.maxHp },
+        mp: { current: 0, max: 0 },
+        xp: { current: hero.xp, max: 50 }, // Level 1 XP threshold
+      }
+    : {
+        name: 'Unknown',
+        level: 1,
+        hp: { current: 0, max: 0 },
+        mp: { current: 0, max: 0 },
+        xp: { current: 0, max: 50 },
+      }
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep">
       <TopBar
-        characterName={MOCK_PLAYER.name}
-        level={MOCK_PLAYER.level}
-        hp={MOCK_PLAYER.hp}
-        mp={MOCK_PLAYER.mp}
-        xp={MOCK_PLAYER.xp}
+        characterName={playerData.name}
+        level={playerData.level}
+        hp={playerData.hp}
+        mp={playerData.mp}
+        xp={playerData.xp}
       />
 
       {/* Main content area — between fixed bars */}

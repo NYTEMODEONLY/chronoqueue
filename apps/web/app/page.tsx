@@ -1,5 +1,5 @@
-import { GameShell } from '../components/layout/game-shell'
+import { GameRoot } from '../components/game-root'
 
 export default function Home() {
-  return <GameShell />
+  return <GameRoot />
 }
