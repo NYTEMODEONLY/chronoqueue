@@ -108,6 +108,10 @@ function LogEntryRow({ entry }: { entry: LogEntry }) {
         <span className={`font-[family-name:var(--font-cinzel)] font-bold tracking-[0.05em] ${colorClass}`}>
           {entry.text}
         </span>
+      ) : entry.type === 'flavor' ? (
+        <span className={`font-[family-name:var(--font-inter)] ${colorClass}`}>
+          {entry.text}
+        </span>
       ) : (
         <span className={colorClass}>{entry.text}</span>
       )}
