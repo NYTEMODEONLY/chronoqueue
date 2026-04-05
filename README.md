@@ -91,7 +91,30 @@ Create `apps/web/.env.local`:
 DATABASE_URL=postgresql://...    # Supabase connection string (pooler)
 NEXT_PUBLIC_SUPABASE_URL=...     # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...# Supabase anonymous key
+QA_TOOL_TOKEN=...                # Optional shared token for /api/qa/test-hero-state
 ```
+
+### QA mutation endpoint (manual refresh checks)
+
+Use this endpoint to trigger deterministic hero state changes in non-player workflows:
+
+```bash
+curl -X POST "https://<staging-or-prod>/api/qa/test-hero-state" \
+  -H "Content-Type: application/json" \
+  -H "x-qa-token: $QA_TOOL_TOKEN" \
+  --data '{
+    "heroId": "<hero-id>",
+    "action": "all",
+    "questIncrement": 1,
+    "eventType": "qa_test_event",
+    "inventory": {
+      "name": "QA Debug Item",
+      "slot": "weapon"
+    }
+  }'
+```
+
+`action` options: `all`, `tick`, `quest`, `inventory`, `event`.
 
 ## Architecture
 
