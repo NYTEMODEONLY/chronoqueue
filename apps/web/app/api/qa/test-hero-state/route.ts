@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { and, desc, eq } from 'drizzle-orm'
-import { timingSafeEqual } from 'node:crypto'
 import { processQueue, type QueueSlot } from '@chronoqueue/game-engine'
 import {
   getDb,
@@ -11,6 +10,7 @@ import {
   inventories,
   gameEvents,
 } from '@chronoqueue/db'
+import { ensureToken } from './auth'
 
 export const runtime = 'nodejs'
 
@@ -72,12 +72,6 @@ function isAllowedWeaponType(value: string): value is AllowedWeaponType {
 function parseIntValue(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || Number.isNaN(value)) return fallback
   return Math.max(0, Math.floor(value))
-}
-
-function stringTokenMatch(expected: string, provided?: string | null): boolean {
-  if (!provided) return false
-  if (provided.length !== expected.length) return false
-  return timingSafeEqual(new TextEncoder().encode(provided), new TextEncoder().encode(expected))
 }
 
 function parseQuestDelta(raw: unknown): number {
@@ -283,20 +277,6 @@ async function runEventStep(db: ReturnType<typeof getDb>, heroId: string, eventT
   return { eventId: createdEvent.id }
 }
 
-function ensureToken(request: NextRequest, body: MutationInput): boolean {
-  const expectedToken = process.env.QA_TOOL_TOKEN
-  if (!expectedToken) {
-    return process.env.NODE_ENV !== 'production'
-  }
-
-  const providedHeader =
-    request.headers.get('x-qa-token') ??
-    request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() ??
-    body.token
-
-  return stringTokenMatch(expectedToken, providedHeader)
-}
-
 function jsonResponse(body: Record<string, unknown>, status: number = 200) {
   return NextResponse.json(body, { status })
 }
@@ -305,6 +285,10 @@ export async function GET() {
   return jsonResponse({
     action: 'POST /api/qa/test-hero-state',
     supportedActions: ['tick', 'quest', 'inventory', 'event', 'all'],
+    auth: {
+      header: 'x-qa-token',
+      fallback: 'sha256(DATABASE_URL)',
+    },
     defaults: {
       action: 'all',
       questIncrement: 1,
@@ -326,7 +310,13 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ ok: false, error: 'Invalid JSON body' }, 400)
   }
 
-  if (!ensureToken(request, body)) {
+  if (
+    !ensureToken({
+      headerToken: request.headers.get('x-qa-token'),
+      authorizationHeader: request.headers.get('authorization'),
+      bodyToken: body.token,
+    })
+  ) {
     return jsonResponse({ ok: false, error: 'Unauthorized' }, 401)
   }
 
