@@ -1,9 +1,10 @@
 'use server'
 
 import { getDb, players, heroes, items, inventories } from '@chronoqueue/db'
-import { and, eq, ne } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { HeroClassId } from '@/lib/class-data'
 import { getClassById, calcMaxHp } from '@/lib/class-data'
+import { isHeroNameTakenError } from '@/lib/hero-name-errors'
 
 export interface CreateCharacterInput {
   name: string
@@ -107,17 +108,6 @@ function toHeroWithEquipment(
   }
 }
 
-function isHeroNameTakenError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false
-  const dbError = error as { code?: string; detail?: string; constraint?: string }
-
-  if (dbError.code !== '23505') return false
-  if (dbError.constraint === 'players_username_key') return true
-  if (typeof dbError.detail === 'string' && dbError.detail.includes('(username)=(')) return true
-
-  return false
-}
-
 export async function createCharacter(
   input: CreateCharacterInput
 ): Promise<{ success: true; hero: HeroWithEquipment } | { success: false; error: string }> {
@@ -131,10 +121,20 @@ export async function createCharacter(
     const duplicateName = await db
       .select()
       .from(players)
-      .where(and(eq(players.username, name), ne(players.authId, input.deviceId)))
+      .where(eq(players.username, name))
       .limit(1)
 
     if (duplicateName.length > 0) {
+      return { success: false, error: 'Hero name already exists' }
+    }
+
+    const duplicateHeroName = await db
+      .select()
+      .from(heroes)
+      .where(eq(heroes.name, name))
+      .limit(1)
+
+    if (duplicateHeroName.length > 0) {
       return { success: false, error: 'Hero name already exists' }
     }
 
