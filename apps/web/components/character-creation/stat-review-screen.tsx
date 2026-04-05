@@ -17,6 +17,8 @@ interface StatReviewScreenProps {
   classId: HeroClassId
   onConfirm: () => void
   onBack: () => void
+  isLoading?: boolean
+  error?: string | null
 }
 
 export function StatReviewScreen({
@@ -24,6 +26,8 @@ export function StatReviewScreen({
   classId,
   onConfirm,
   onBack,
+  isLoading,
+  error,
 }: StatReviewScreenProps) {
   const cls = getClassById(classId)
   const maxStat = Math.max(...STAT_KEYS.map((k) => cls.baseStats[k]))
@@ -133,8 +137,13 @@ export function StatReviewScreen({
 
         {/* CTA */}
         <div className="mt-8 text-center">
-          <GameButton onClick={onConfirm} className="w-full max-w-sm">
-            ENTER THE QUEUE
+          {error && (
+            <p className="mb-3 font-[family-name:var(--font-inter)] text-[length:var(--font-small)] text-[#e05555]">
+              {error}
+            </p>
+          )}
+          <GameButton onClick={onConfirm} className="w-full max-w-sm" disabled={isLoading}>
+            {isLoading ? 'CREATING...' : 'ENTER THE QUEUE'}
           </GameButton>
           <p className="mt-3 font-[family-name:var(--font-inter)] text-[length:var(--font-small)] italic text-text-tertiary">
             You can change nothing about this later. Choose wisely. Or don&apos;t. Gerald doesn&apos;t judge.

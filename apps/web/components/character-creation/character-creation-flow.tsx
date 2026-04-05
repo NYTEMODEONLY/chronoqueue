@@ -8,7 +8,8 @@ import { StatReviewScreen } from './stat-review-screen'
 import { TransitionScreen } from './transition-screen'
 import { validateHeroName } from '@/lib/validation'
 import type { HeroClassId } from '@/lib/class-data'
-import { useGameStore } from '@/lib/game-store'
+import { useGameStore, getOrCreateDeviceId } from '@/lib/game-store'
+import { createCharacter } from '@/app/actions/character'
 
 type CreationStep = 'name_input' | 'class_select' | 'stat_review' | 'transition'
 
@@ -17,7 +18,9 @@ export function CharacterCreationFlow({ onComplete }: { onComplete: () => void }
   const [rawName, setRawName] = useState('')
   const [resolvedName, setResolvedName] = useState('')
   const [selectedClassId, setSelectedClassId] = useState<HeroClassId | null>(null)
-  const createHero = useGameStore((s) => s.createHero)
+  const [error, setError] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const { deviceId, setDeviceId, setHero } = useGameStore()
 
   const handleNameNext = useCallback((name: string) => {
     const result = validateHeroName(name)
@@ -31,12 +34,34 @@ export function CharacterCreationFlow({ onComplete }: { onComplete: () => void }
     setStep('stat_review')
   }, [])
 
-  const handleConfirm = useCallback(() => {
-    if (!selectedClassId) return
-    // Persist hero to store (local storage)
-    createHero(resolvedName, selectedClassId)
-    setStep('transition')
-  }, [selectedClassId, resolvedName, createHero])
+  const handleConfirm = useCallback(async () => {
+    if (!selectedClassId || isCreating) return
+    setIsCreating(true)
+    setError(null)
+
+    try {
+      // Ensure we have a deviceId for anonymous auth
+      const id = getOrCreateDeviceId(deviceId)
+      if (!deviceId) setDeviceId(id)
+
+      const result = await createCharacter({
+        name: resolvedName,
+        classId: selectedClassId,
+        deviceId: id,
+      })
+
+      if (result.success) {
+        setHero(result.hero)
+        setStep('transition')
+      } else {
+        setError(result.error)
+        setIsCreating(false)
+      }
+    } catch {
+      setError('Connection error. Please try again.')
+      setIsCreating(false)
+    }
+  }, [selectedClassId, resolvedName, deviceId, setDeviceId, setHero, isCreating])
 
   const handleTransitionComplete = useCallback(() => {
     onComplete()
@@ -66,7 +91,9 @@ export function CharacterCreationFlow({ onComplete }: { onComplete: () => void }
           heroName={resolvedName}
           classId={selectedClassId}
           onConfirm={handleConfirm}
-          onBack={() => setStep('class_select')}
+          onBack={() => { setStep('class_select'); setError(null) }}
+          isLoading={isCreating}
+          error={error}
         />
       )}
       {step === 'transition' && (

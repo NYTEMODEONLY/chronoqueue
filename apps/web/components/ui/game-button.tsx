@@ -46,6 +46,7 @@ export function GameButton({
         tracking-[0.04em]
         transition-all duration-150
         cursor-pointer
+        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0
         ${VARIANT_CLASSES[variant]}
         ${className}
       `}

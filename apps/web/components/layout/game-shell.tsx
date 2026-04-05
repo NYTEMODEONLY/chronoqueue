@@ -8,6 +8,7 @@ import { AdventureLog } from '../panels/adventure-log'
 import { InventoryPanel } from '../panels/inventory-panel'
 import { QuestPanel } from '../panels/quest-panel'
 import { useGameStore } from '@/lib/game-store'
+import { calcMaxHp } from '@/lib/class-data'
 
 export function GameShell() {
   const [activeTab, setActiveTab] = useState<GameTab>('adventure')
@@ -17,9 +18,9 @@ export function GameShell() {
     ? {
         name: hero.name,
         level: hero.level,
-        hp: { current: hero.hp, max: hero.maxHp },
+        hp: { current: hero.hp, max: calcMaxHp(hero.stats.vit) },
         mp: { current: 0, max: 0 },
-        xp: { current: hero.xp, max: 50 }, // Level 1 XP threshold
+        xp: { current: hero.xp, max: 50 },
       }
     : {
         name: 'Unknown',

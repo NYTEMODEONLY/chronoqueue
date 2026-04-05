@@ -1,105 +1,55 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { HeroStats } from '@chronoqueue/db'
-import {
-  type HeroClassId,
-  type StarterItem,
-  getClassById,
-  calcMaxHp,
-} from './class-data'
-
-// -- Persisted hero data (matches DB schema shape for future Supabase swap) --
-
-export interface PersistedHero {
-  id: string
-  name: string
-  classId: HeroClassId
-  level: number
-  xp: number
-  stats: HeroStats
-  hp: number
-  maxHp: number
-  gold: number
-  currentZone: string
-  currentAct: number
-  combatState: 'idle' | 'in_combat' | 'victory' | 'loot' | 'defeat' | 'respawn'
-  deaths: number
-  kills: number
-  equipment: {
-    weapon: StarterItem | null
-    chest: StarterItem | null
-    legs: StarterItem | null
-    accessory_1: StarterItem | null
-  }
-  createdAt: string
-  lastTickAt: string
-}
+import type { HeroWithEquipment } from '@/app/actions/character'
 
 // -- Game store state --
+// Server is the source of truth. Zustand caches the last-known hero
+// and stores the deviceId for anonymous auth.
 
 interface GameState {
-  hero: PersistedHero | null
+  deviceId: string | null
+  hero: HeroWithEquipment | null
   hasCompletedCreation: boolean
+  isLoading: boolean
 
   // Actions
-  createHero: (name: string, classId: HeroClassId) => void
-  deleteHero: () => void
-  updateHero: (partial: Partial<PersistedHero>) => void
+  setDeviceId: (id: string) => void
+  setHero: (hero: HeroWithEquipment) => void
+  clearHero: () => void
+  setLoading: (loading: boolean) => void
 }
 
-function generateId(): string {
+function generateDeviceId(): string {
   return crypto.randomUUID()
+}
+
+export function getOrCreateDeviceId(currentId: string | null): string {
+  if (currentId) return currentId
+  return generateDeviceId()
 }
 
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
+      deviceId: null,
       hero: null,
       hasCompletedCreation: false,
+      isLoading: false,
 
-      createHero: (name: string, classId: HeroClassId) => {
-        const classDef = getClassById(classId)
-        const maxHp = calcMaxHp(classDef.baseStats.vit)
-        const now = new Date().toISOString()
-
-        const hero: PersistedHero = {
-          id: generateId(),
-          name,
-          classId,
-          level: 1,
-          xp: 0,
-          stats: { ...classDef.baseStats },
-          hp: maxHp,
-          maxHp,
-          gold: 0,
-          currentZone: '1-1',
-          currentAct: 1,
-          combatState: 'idle',
-          deaths: 0,
-          kills: 0,
-          equipment: {
-            weapon: classDef.starterWeapon,
-            chest: classDef.starterArmor.slot === 'chest' ? classDef.starterArmor : null,
-            legs: classDef.starterArmor.slot === 'legs' ? classDef.starterArmor : null,
-            accessory_1:
-              classDef.starterArmor.slot === 'accessory_1' ? classDef.starterArmor : null,
-          },
-          createdAt: now,
-          lastTickAt: now,
-        }
-
-        set({ hero, hasCompletedCreation: true })
+      setDeviceId: (id: string) => {
+        set({ deviceId: id })
       },
 
-      deleteHero: () => {
+      setHero: (hero: HeroWithEquipment) => {
+        set({ hero, hasCompletedCreation: true, isLoading: false })
+      },
+
+      clearHero: () => {
         set({ hero: null, hasCompletedCreation: false })
       },
 
-      updateHero: (partial) => {
-        set((state) => {
-          if (!state.hero) return state
-          return { hero: { ...state.hero, ...partial } }
-        })
+      setLoading: (loading: boolean) => {
+        set({ isLoading: loading })
       },
     }),
     {

@@ -26,6 +26,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.62.0
         version: 5.96.2(react@19.2.4)
+      drizzle-orm:
+        specifier: ^0.38.0
+        version: 0.38.4(@types/react@19.2.14)(postgres@3.4.8)(react@19.2.4)
       framer-motion:
         specifier: ^11.15.0
         version: 11.18.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
