@@ -16,6 +16,7 @@
     "@chronoqueue/db": "workspace:*",
     "@chronoqueue/game-engine": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
+    "drizzle-orm": "^0.38.0",
     "framer-motion": "^11.15.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
