@@ -99,9 +99,13 @@ QA_TOOL_TOKEN=...                # Optional shared token for /api/qa/test-hero-s
 Use this endpoint to trigger deterministic hero state changes in non-player workflows:
 
 ```bash
+QA_ENDPOINT_TOKEN="${QA_TOOL_TOKEN}"
+# Fallback when QA_TOOL_TOKEN is unavailable:
+# QA_ENDPOINT_TOKEN="$(printf '%s' "$DATABASE_URL" | shasum -a 256 | awk '{print $1}')"
+
 curl -X POST "https://<staging-or-prod>/api/qa/test-hero-state" \
   -H "Content-Type: application/json" \
-  -H "x-qa-token: $QA_TOOL_TOKEN" \
+  -H "x-qa-token: $QA_ENDPOINT_TOKEN" \
   --data '{
     "heroId": "<hero-id>",
     "action": "all",
@@ -115,6 +119,8 @@ curl -X POST "https://<staging-or-prod>/api/qa/test-hero-state" \
 ```
 
 `action` options: `all`, `tick`, `quest`, `inventory`, `event`.
+
+For Vercel preview deployments with protection enabled, provide the deployment bypass token first. App-level QA auth runs after Vercel protection.
 
 ## Architecture
 
